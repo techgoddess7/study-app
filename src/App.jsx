@@ -710,43 +710,46 @@ export default function StudyAppPrototype() {
   const [lastTotal, setLastTotal] = useState(5);
   const [fact, setFact] = useState(null);
 
-  // load persisted progress on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await window.storage.get(STORAGE_KEY, false);
-        if (result && result.value) {
-          const data = JSON.parse(result.value);
-          if (typeof data.stardust === "number") setStardust(data.stardust);
-          if (typeof data.streak === "number") setStreak(data.streak);
-          if (data.subject) setSubject(data.subject);
-          if (Array.isArray(data.notes)) setNotes(data.notes);
-        }
-      } catch (e) {
-        // no saved data yet — fine, defaults stand
-      } finally {
-        setLoaded(true);
-      }
-    })();
-  }, []);
+ // Load saved progress when the app starts
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
 
-  // persist whenever key state changes
-  useEffect(() => {
-    if (!loaded) return;
-    (async () => {
-      try {
-        const result = await window.storage.set(
-          STORAGE_KEY,
-          JSON.stringify({ stardust, streak, subject, notes }),
-          false
-        );
-        if (!result) setSaveError(true);
-        else setSaveError(false);
-      } catch (e) {
-        setSaveError(true);
-      }
-    })();
-  }, [loaded, stardust, streak, subject, notes]);
+    if (saved) {
+      const data = JSON.parse(saved);
+
+      if (typeof data.stardust === "number") setStardust(data.stardust);
+      if (typeof data.streak === "number") setStreak(data.streak);
+      if (data.subject) setSubject(data.subject);
+      if (Array.isArray(data.notes)) setNotes(data.notes);
+    }
+  } catch (e) {
+    console.error("Failed to load progress:", e);
+  } finally {
+    setLoaded(true);
+  }
+}, []);
+  // Save progress whenever it changes
+useEffect(() => {
+  if (!loaded) return;
+
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        stardust,
+        streak,
+        subject,
+        notes,
+      })
+    );
+
+    setSaveError(false);
+  } catch (e) {
+    console.error("Failed to save progress:", e);
+    setSaveError(true);
+  }
+}, [loaded, stardust, streak, subject, notes]);
 
   useEffect(() => {
     if (screen === "dashboard") {

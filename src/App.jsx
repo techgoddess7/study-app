@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import QUESTION_BANKS from "./data/questions.js";
+import { supabase } from "./supabaseClient";
 import {
   Rocket, Star, Home, BookOpen, StickyNote, Check, X, Sparkles,
   Plus, Trash2, SkipForward, Loader2, Atom, Calculator, BookText, Type
@@ -17,42 +19,6 @@ const SUBJECTS = [
   { key: "Science", icon: Atom, color: "#FF6B9D" },
   { key: "Vocabulary", icon: Type, color: "#FFC857" },
 ];
-
-const QUESTION_BANKS = {
-  Math: [
-    { q: "If 3x + 7 = 22, what is the value of x?", options: ["3", "5", "7", "15"], answer: 1 },
-    { q: "A circle has a radius of 4. What is its area, in terms of π?", options: ["8π", "16π", "4π", "12π"], answer: 1 },
-    { q: "Solve for y: 2y - 4 = 3y - 9", options: ["5", "-5", "13", "1"], answer: 0 },
-    { q: "What is 15% of 240?", options: ["24", "36", "32", "40"], answer: 1 },
-    { q: "If f(x) = 2x² - 3, what is f(-2)?", options: ["5", "1", "-5", "11"], answer: 0 },
-    { q: "The slope of the line 4x - 2y = 8 is:", options: ["2", "-2", "4", "0.5"], answer: 0 },
-    { q: "What is the value of √144 + √25?", options: ["17", "19", "13", "22"], answer: 0 },
-  ],
-  Reading: [
-    { q: "Which word best replaces 'ubiquitous' in a sentence about smartphones?", options: ["Rare", "Expensive", "Everywhere", "Fragile"], answer: 2 },
-    { q: "The author's tone in the passage can best be described as:", options: ["Indifferent", "Reverent", "Hostile", "Comedic"], answer: 1 },
-    { q: "A passage that moves from a specific example to a general claim uses which structure?", options: ["Deductive", "Inductive", "Circular", "Chronological"], answer: 1 },
-    { q: "Which best describes an 'unreliable narrator'?", options: ["A narrator who lies to the reader on purpose or by mistake", "A narrator who speaks in first person", "A narrator who is a minor character", "A narrator who never appears"], answer: 0 },
-    { q: "'The city was a living organism' is an example of:", options: ["Simile", "Metaphor", "Hyperbole", "Irony"], answer: 1 },
-    { q: "A rhetorical question is used mainly to:", options: ["Request information", "Emphasize a point without expecting an answer", "Confuse the reader", "End a paragraph"], answer: 1 },
-  ],
-  Science: [
-    { q: "What is the powerhouse of the cell?", options: ["Ribosome", "Nucleus", "Mitochondria", "Golgi body"], answer: 2 },
-    { q: "Which force keeps planets in orbit around the sun?", options: ["Magnetism", "Gravity", "Friction", "Nuclear force"], answer: 1 },
-    { q: "What gas do plants absorb during photosynthesis?", options: ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"], answer: 2 },
-    { q: "What is the atomic number of an element defined by?", options: ["Number of neutrons", "Number of protons", "Atomic mass", "Number of electrons shells"], answer: 1 },
-    { q: "Which of these is a vector quantity?", options: ["Speed", "Mass", "Velocity", "Temperature"], answer: 2 },
-    { q: "Sound travels fastest through:", options: ["Air", "Water", "Steel", "Vacuum"], answer: 2 },
-  ],
-  Vocabulary: [
-    { q: "'Ephemeral' most nearly means:", options: ["Lasting forever", "Short-lived", "Extremely loud", "Deeply confusing"], answer: 1 },
-    { q: "'Meticulous' most nearly means:", options: ["Careless", "Very careful and precise", "Fast-moving", "Emotional"], answer: 1 },
-    { q: "'Ambivalent' most nearly means:", options: ["Confident", "Having mixed feelings", "Angry", "Enthusiastic"], answer: 1 },
-    { q: "'Candid' most nearly means:", options: ["Honest and direct", "Secretive", "Nervous", "Formal"], answer: 0 },
-    { q: "'Austere' most nearly means:", options: ["Luxurious", "Severely simple, without decoration", "Colorful", "Welcoming"], answer: 1 },
-    { q: "'Resilient' most nearly means:", options: ["Fragile", "Able to recover quickly from difficulty", "Slow", "Stubborn"], answer: 1 },
-  ],
-};
 
 const FACTS = [
   "Marie Curie is the only person to win Nobel Prizes in two different sciences.",
@@ -136,6 +102,77 @@ function LaunchTrajectory({ step, total }) {
 }
 
 // ---------- screens ----------
+function LoginScreen({ onAuth }) {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const { error } = isSignUp
+      ? await supabase.auth.signUp({ email, password })
+      : await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) setError(error.message);
+  }
+
+  return (
+    <div style={{ padding: "60px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+      <Companion mood="idle" size={64} />
+      <div style={{ textAlign: "center" }}>
+        <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#F1F3F9", fontSize: 22, margin: 0 }}>
+          {isSignUp ? "Start your mission" : "Welcome back to orbit"}
+        </h1>
+        <div style={{ color: "#8B93B8", fontSize: 13, marginTop: 6 }}>
+          {isSignUp ? "Create an account to save your progress" : "Sign in to pick up where you left off"}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
+        {error && (
+          <div style={{ color: "#FF6B9D", fontSize: 12, textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }}>
+            {error}
+          </div>
+        )}
+        <input
+          type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email" required
+          style={{
+            background: "#161B33", border: "1px solid #232A4D", borderRadius: 10,
+            padding: "12px 14px", color: "#F1F3F9", fontSize: 14, outline: "none",
+          }}
+        />
+        <input
+          type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password" required minLength={6}
+          style={{
+            background: "#161B33", border: "1px solid #232A4D", borderRadius: 10,
+            padding: "12px 14px", color: "#F1F3F9", fontSize: 14, outline: "none",
+          }}
+        />
+        <button type="submit" disabled={loading} style={{
+          background: "#00D9C0", border: "none", color: "#0B1026", borderRadius: 12,
+          padding: "13px 0", fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600,
+          fontSize: 15, cursor: loading ? "default" : "pointer", opacity: loading ? 0.6 : 1,
+          marginTop: 4,
+        }}>
+          {loading ? "Launching..." : isSignUp ? "Create account" : "Log in"}
+        </button>
+      </form>
+
+      <div style={{ color: "#8B93B8", fontSize: 13 }}>
+        {isSignUp ? "Already have an account? " : "New to Orbit? "}
+        <span onClick={() => setIsSignUp(!isSignUp)} style={{ color: "#00D9C0", cursor: "pointer", fontWeight: 600 }}>
+          {isSignUp ? "Log in" : "Sign up"}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Dashboard({ stardust, streak, subject, onPickSubject, onStart }) {
   return (
@@ -221,6 +258,7 @@ function TestScreen({ subject, onFinish }) {
   const [selected, setSelected] = useState(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [locked, setLocked] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   const q = questions[i];
 
@@ -230,16 +268,8 @@ function TestScreen({ subject, onFinish }) {
     setLocked(true);
     const isRight = idx === q.answer;
     if (isRight) setCorrectCount((c) => c + 1);
-    setTimeout(() => {
-      if (i + 1 < questions.length) {
-        setI(i + 1);
-        setSelected(null);
-        setLocked(false);
-      } else {
-        onFinish(correctCount + (isRight ? 1 : 0), questions.length);
-      }
-    }, 700);
-  }
+   setShowExplanation(true);
+   }
 
   return (
     <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -271,6 +301,58 @@ function TestScreen({ subject, onFinish }) {
           );
         })}
       </div>
+      {showExplanation && (
+  <div
+    style={{
+      marginTop: 20,
+      padding: 16,
+      background: "#161B33",
+      border: "1px solid #232A4D",
+      borderRadius: 12,
+      color: "#F1F3F9",
+    }}
+  >
+    <div
+      style={{
+        color: "#FFC857",
+        fontWeight: "bold",
+        marginBottom: 8,
+      }}
+    >
+      💡 Explanation
+    </div>
+
+    <div style={{ lineHeight: 1.6 }}>
+      {q.explanation || "Explanation coming soon.🚀"}
+    </div>
+
+    <button
+      onClick={() => {
+        setShowExplanation(false);
+
+        if (i + 1 < questions.length) {
+          setI(i + 1);
+          setSelected(null);
+          setLocked(false);
+        } else {
+          onFinish(correctCount, questions.length);
+        }
+      }}
+      style={{
+        marginTop: 16,
+        padding: "10px 18px",
+        background: "#00D9C0",
+        color: "#0B1026",
+        border: "none",
+        borderRadius: 10,
+        cursor: "pointer",
+        fontWeight: "bold",
+      }}
+    >
+      Next Question →
+    </button>
+  </div>
+)}
     </div>
   );
 }
@@ -696,6 +778,8 @@ function FunFactToast({ fact, onClose }) {
 // ---------- root ----------
 
 export default function StudyAppPrototype() {
+  const [session, setSession] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [screen, setScreen] = useState("dashboard");
@@ -729,7 +813,22 @@ useEffect(() => {
     setLoaded(true);
   }
 }, []);
-  // Save progress whenever it changes
+useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    setSession(session);
+    setCheckingSession(false);
+  });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+    setCheckingSession(false);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
+ // Save progress whenever it changes
 useEffect(() => {
   if (!loaded) return;
 
@@ -760,7 +859,7 @@ useEffect(() => {
     }
   }, [screen]);
 
-  if (!loaded) {
+    if (!loaded) {
     return (
       <div style={{
         maxWidth: 380, margin: "0 auto", background: "#0B1026", borderRadius: 28,
@@ -774,6 +873,46 @@ useEffect(() => {
       </div>
     );
   }
+
+  if (checkingSession) {
+    return (
+      <div style={{
+        maxWidth: 380,
+        margin: "0 auto",
+        background: "#0B1026",
+        borderRadius: 28,
+        border: "1px solid #232A4D",
+        minHeight: 640,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        fontFamily: "Inter, sans-serif",
+      }}>
+        <Loader2
+          size={28}
+          color="#00D9C0"
+          style={{ animation: "spin 1s linear infinite" }}
+        />
+        <div style={{ color: "#8B93B8", fontSize: 13 }}>
+          Checking your account...
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+  return (
+    <div style={{
+      maxWidth: 380, margin: "0 auto", background: "#0B1026", borderRadius: 28,
+      border: "1px solid #232A4D", minHeight: 640, fontFamily: "Inter, sans-serif",
+    }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');`}</style>
+      <LoginScreen />
+    </div>
+  );
+}
 
   return (
     <div style={{
